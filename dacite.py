@@ -48,6 +48,7 @@ class Config:
     transform: Dict[str, Callable[[Any], Any]] = dc_field(default_factory=dict)
     flattened: List[str] = dc_field(default_factory=list)
     forward_references: Optional[Dict[str, Any]] = None
+    type_transform: Dict[type, Callable[[Any], Any]] = dc_field(default_factory=dict)
 
 
 T = TypeVar('T')
@@ -100,6 +101,8 @@ def from_dict(data_class: Type[T], data: Data, config: Optional[Config] = None) 
                     )
                 if field.name in config.cast:
                     value = _cast_value(field.type, value)
+                if field.type in config.type_transform:
+                    value = config.type_transform[field.type](value)
             if not _is_instance(field.type, value):
                 raise WrongTypeError(field, value)
         if field.init:
@@ -206,6 +209,7 @@ def _make_inner_config(field: Field, config: Config) -> Config:
         cast=_extract_nested_list(field, config.cast),
         transform=_extract_nested_dict(field, config.transform),
         flattened=_extract_nested_list(field, config.flattened),
+        type_transform=config.type_transform,
     )
 
 
